@@ -1,6 +1,8 @@
-use crate::git::CommitInfo;
+use crate::{
+    git::{self, CommitInfo, GitManager},
+    my_errors::AppError,
+};
 use ratatui::widgets::ListState;
-use std::error::Error;
 
 pub struct App {
     pub commits: Vec<CommitInfo>,
@@ -9,5 +11,35 @@ pub struct App {
 }
 
 impl App {
-    //pub fn new() -> Result<Self, >
+    pub fn new() -> Result<Self, AppError> {
+        let git_manager = GitManager::new()?;
+        let commits = git_manager.get_commits()?;
+
+        let mut list_state = ListState::default();
+        if !commits.is_empty() {
+            list_state.select(Some(0));
+        }
+
+        Ok(App {
+            commits,
+            list_state,
+            should_quit: false,
+        })
+    }
+
+    pub fn next_commit(&mut self) {
+        if let Some(selected) = self.list_state.selected() {
+            if selected < self.commits.len() - 1 {
+                self.list_state.select(Some(selected + 1));
+            }
+        }
+    }
+
+    pub fn previous_commit(&mut self) {
+        if let Some(selected) = self.list_state.selected() {
+            if selected > 0 {
+                self.list_state.select(Some(selected - 1));
+            }
+        }
+    }
 }

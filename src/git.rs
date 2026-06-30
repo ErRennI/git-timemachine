@@ -1,5 +1,4 @@
 use git2::{Oid, Repository, Sort};
-use std::error::Error;
 
 pub struct CommitInfo {
     pub id: Oid,

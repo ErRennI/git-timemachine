@@ -1,6 +1,6 @@
 use crate::{
     git::{self, CommitInfo, GitManager},
-    my_errors::AppError,
+    my_errors::TimeMachineError,
 };
 use ratatui::widgets::ListState;
 
@@ -11,7 +11,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Result<Self, AppError> {
+    pub fn new() -> Result<Self, TimeMachineError> {
         let git_manager = GitManager::new()?;
         let commits = git_manager.get_commits()?;
 

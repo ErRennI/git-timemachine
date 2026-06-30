@@ -1,30 +1,34 @@
 use std::fmt;
 
 #[derive(Debug)]
-pub enum AppError {
+pub enum TimeMachineError {
     Git(git2::Error),
     Io(std::io::Error),
+    EmptyRepository,
 }
 
-impl fmt::Display for AppError {
+impl fmt::Display for TimeMachineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AppError::Git(e) => write!(f, "Git2 Error: {}", e),
-            AppError::Io(e) => write!(f, "System/IO Error: {}", e),
+            TimeMachineError::Git(e) => write!(f, "Git error: {}", e),
+            TimeMachineError::Io(e) => write!(f, "I/O error: {}", e),
+            TimeMachineError::EmptyRepository => {
+                write!(f, "Error: This repository has no commits!")
+            }
         }
     }
 }
 
-impl std::error::Error for AppError {}
+impl std::error::Error for TimeMachineError {}
 
-impl From<git2::Error> for AppError {
+impl From<git2::Error> for TimeMachineError {
     fn from(err: git2::Error) -> Self {
-        AppError::Git(err)
+        TimeMachineError::Git(err)
     }
 }
 
-impl From<std::io::Error> for AppError {
+impl From<std::io::Error> for TimeMachineError {
     fn from(err: std::io::Error) -> Self {
-        AppError::Io(err)
+        TimeMachineError::Io(err)
     }
 }

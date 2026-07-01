@@ -1,5 +1,10 @@
+use crate::TimeMachineError;
 use git2::{Oid, Repository, Sort};
 
+pub struct DiffLine {
+    pub content: String,
+    pub line_type: char,
+}
 pub struct CommitInfo {
     pub id: Oid,
     pub short_id: String,
@@ -38,5 +43,37 @@ impl GitManager {
             }
         }
         Ok(commits)
+    }
+
+    pub fn get_commit_diff(&self, commit_id: Oid) -> Result<Vec<DiffLine>, TimeMachineError> {
+        let commit = self.repo.find_commit(commit_id)?;
+        let mut commit_tree = commit.tree()?;
+
+        let parent_tree = if commit.parent_count() > 0 {
+            Some(commit.parent(0)?.tree()?)
+        } else {
+            None
+        };
+
+        let diff = self
+            .repo
+            .diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), None)?;
+
+        let mut diff_lines: Vec<DiffLine> = Vec::new();
+
+        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+            let origin = line.origin();
+
+            let content = String::from_utf8_lossy(line.content()).into_owned();
+
+            diff_lines.push(DiffLine {
+                content,
+                line_type: origin,
+            });
+
+            true
+        })?;
+
+        Ok(diff_lines)
     }
 }

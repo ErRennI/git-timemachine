@@ -1,13 +1,18 @@
 use crate::{
-    git::{self, CommitInfo, GitManager},
-    my_errors::TimeMachineError,
+    git::{self, CommitInfo, DiffLine, GitManager},
+    my_errors::{self, TimeMachineError},
 };
+use git2::Oid;
 use ratatui::widgets::ListState;
+use std::collections::HashMap;
 
 pub struct App {
     pub commits: Vec<CommitInfo>,
     pub list_state: ListState,
     pub should_quit: bool,
+
+    pub diff_chache: HashMap<Oid, Vec<DiffLine>>,
+    pub current_diff: Vec<DiffLine>,
 }
 
 impl App {
@@ -20,13 +25,21 @@ impl App {
             list_state.select(Some(0));
         }
 
-        Ok(App {
+        let mut app = App {
             commits,
             list_state,
             should_quit: false,
-        })
-    }
+            diff_chache: HashMap::new(),
+            current_diff: Vec::new(),
+        };
 
+        if !app.commits.is_empty() {
+            app.update_curr_diff(git_manager)?;
+        }
+
+        Ok(app)
+    }
+    //TODO update_cureent_diffi tetikle
     pub fn next_commit(&mut self) {
         if let Some(selected) = self.list_state.selected() {
             if selected < self.commits.len() - 1 {
@@ -42,4 +55,6 @@ impl App {
             }
         }
     }
+
+    pub fn update_curr_diff(&mut self, git_manager: GitManager) -> Result<(), TimeMachineError> {}
 }

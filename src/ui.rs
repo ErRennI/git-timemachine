@@ -3,6 +3,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
+    text,
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 
@@ -29,10 +30,23 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     f.render_stateful_widget(list, parts[0], &mut app.list_state);
 
-    let detail = Paragraph::new("Detaylar yakında eklenecek...").block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(" Diff / Details "),
-    );
-    f.render_widget(detail, parts[1]);
+    let diff_lines: Vec<ratatui::text::Line> = app
+        .current_diff
+        .iter()
+        .map(|line| {
+            let style = match line.line_type {
+                '+' => Style::default().fg(Color::Green),
+                '-' => Style::default().fg(Color::Red),
+                'H' => Style::default().fg(Color::Magenta),
+                _ => Style::default().fg(Color::Gray),
+            };
+
+            text::Line::from(text::Span::styled(&line.content, style))
+        })
+        .collect();
+
+    let detail_panel =
+        Paragraph::new(diff_lines).block(Block::default().borders(Borders::ALL).title("Details"));
+
+    f.render_widget(detail_panel, parts[1]);
 }

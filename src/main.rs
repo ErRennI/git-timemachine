@@ -9,11 +9,10 @@ use my_errors::TimeMachineError;
 use ratatui::{
     Frame, Terminal,
     backend::{self, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
-use std::io::{self, stdout};
+use std::{env, io::stdout};
+
+use crate::git::GitManager;
 
 fn main() {
     if let Err(err) = run_app() {
@@ -31,7 +30,22 @@ fn run_app() -> Result<(), TimeMachineError> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new()?;
+    let arg_vector: Vec<String> = env::args().collect();
+
+    let git_manager = if arg_vector.len() == 1 {
+        GitManager::new(".")?
+    } else if arg_vector.len() == 2 {
+        GitManager::new(&arg_vector[1])?
+    } else {
+        eprintln!("Usage: git-timemachine [target-git-path]");
+
+        return Err(TimeMachineError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid Input Count!",
+        )));
+    };
+
+    let mut app = App::new(&git_manager)?;
 
     while !app.should_quit {
         terminal.draw(|f| ui::render(f, &mut app))?;
@@ -40,8 +54,8 @@ fn run_app() -> Result<(), TimeMachineError> {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char('q') => app.should_quit = true,
-                    KeyCode::Up => app.previous_commit(),
-                    KeyCode::Down => app.next_commit(),
+                    KeyCode::Up => app.previous_commit(&git_manager),
+                    KeyCode::Down => app.next_commit(&git_manager),
                     _ => {}
                 }
             }

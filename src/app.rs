@@ -11,13 +11,12 @@ pub struct App {
     pub list_state: ListState,
     pub should_quit: bool,
 
-    pub diff_chache: HashMap<Oid, Vec<DiffLine>>,
+    pub diff_cache: HashMap<Oid, Vec<DiffLine>>,
     pub current_diff: Vec<DiffLine>,
 }
 
 impl App {
-    pub fn new() -> Result<Self, TimeMachineError> {
-        let git_manager = GitManager::new()?;
+    pub fn new(git_manager: &GitManager) -> Result<Self, TimeMachineError> {
         let commits = git_manager.get_commits()?;
 
         let mut list_state = ListState::default();
@@ -29,32 +28,55 @@ impl App {
             commits,
             list_state,
             should_quit: false,
-            diff_chache: HashMap::new(),
+            diff_cache: HashMap::new(),
             current_diff: Vec::new(),
         };
 
         if !app.commits.is_empty() {
-            app.update_curr_diff(git_manager)?;
+            app.update_curr_diff(&git_manager)?;
         }
 
         Ok(app)
     }
-    //TODO update_cureent_diffi tetikle
-    pub fn next_commit(&mut self) {
+
+    pub fn next_commit(&mut self, git_manager: &GitManager) {
         if let Some(selected) = self.list_state.selected() {
             if selected < self.commits.len() - 1 {
                 self.list_state.select(Some(selected + 1));
+                let _ = self.update_curr_diff(git_manager);
             }
         }
     }
 
-    pub fn previous_commit(&mut self) {
+    pub fn previous_commit(&mut self, git_manager: &GitManager) {
         if let Some(selected) = self.list_state.selected() {
             if selected > 0 {
                 self.list_state.select(Some(selected - 1));
+                let _ = self.update_curr_diff(git_manager);
             }
         }
     }
 
-    pub fn update_curr_diff(&mut self, git_manager: GitManager) -> Result<(), TimeMachineError> {}
+    pub fn update_curr_diff(&mut self, git_manager: &GitManager) -> Result<(), TimeMachineError> {
+        if let Some(selected) = self.list_state.selected() {
+            if let Some(curr_commit) = self.commits.get(selected) {
+                let curr_oid = curr_commit.id;
+
+                if self.diff_cache.contains_key(&curr_oid) {
+                    if let Some(cached_diff) = self.diff_cache.get(&curr_oid) {
+                        self.current_diff = cached_diff.clone();
+                    }
+                } else {
+                    let new_diff = git_manager.get_commit_diff(curr_oid)?;
+
+                    self.diff_cache.insert(curr_oid, new_diff.clone());
+
+                    self.current_diff = new_diff;
+                }
+            }
+        } else {
+            self.current_diff.clear();
+        }
+        Ok(())
+    }
 }

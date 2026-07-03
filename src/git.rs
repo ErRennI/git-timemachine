@@ -1,6 +1,7 @@
 use crate::TimeMachineError;
 use git2::{Oid, Repository, Sort};
 
+#[derive(Clone)]
 pub struct DiffLine {
     pub content: String,
     pub line_type: char,
@@ -18,12 +19,12 @@ pub struct GitManager {
 
 //TODO: In the later stages it should take an directory argument
 impl GitManager {
-    pub fn new() -> Result<Self, git2::Error> {
-        let repo = Repository::open(".")?;
+    pub fn new(repo_path: &str) -> Result<Self, TimeMachineError> {
+        let repo = Repository::open(repo_path)?;
         Ok(GitManager { repo })
     }
 
-    pub fn get_commits(&self) -> Result<Vec<CommitInfo>, git2::Error> {
+    pub fn get_commits(&self) -> Result<Vec<CommitInfo>, TimeMachineError> {
         let mut revwalk = self.repo.revwalk()?;
         revwalk.push_head()?;
         revwalk.set_sorting(Sort::TIME)?;
@@ -47,7 +48,7 @@ impl GitManager {
 
     pub fn get_commit_diff(&self, commit_id: Oid) -> Result<Vec<DiffLine>, TimeMachineError> {
         let commit = self.repo.find_commit(commit_id)?;
-        let mut commit_tree = commit.tree()?;
+        let commit_tree = commit.tree()?;
 
         let parent_tree = if commit.parent_count() > 0 {
             Some(commit.parent(0)?.tree()?)

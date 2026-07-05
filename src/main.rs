@@ -6,13 +6,10 @@ mod ui;
 use app::App;
 use crossterm::event::{self, Event, KeyCode};
 use my_errors::TimeMachineError;
-use ratatui::{
-    Frame, Terminal,
-    backend::{self, CrosstermBackend},
-};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{env, io::stdout};
 
-use crate::git::GitManager;
+use crate::{app::ActivePanel, git::GitManager};
 
 fn main() {
     if let Err(err) = run_app() {
@@ -52,21 +49,55 @@ fn run_app() -> Result<(), TimeMachineError> {
 
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Press {
+                let is_ctrl = key.modifiers.contains(event::KeyModifiers::CONTROL);
+
                 match key.code {
                     KeyCode::Char('q') => app.should_quit = true,
-                    KeyCode::Up => app.previous_commit(&git_manager),
-                    KeyCode::Down => app.next_commit(&git_manager),
+                    KeyCode::Left => {
+                        if is_ctrl && app.active_panel == ActivePanel::DiffDetailPanel {
+                            app.diff_horizontal_scroll =
+                                app.diff_horizontal_scroll.saturating_sub(4);
+                        } else if !is_ctrl && app.active_panel == ActivePanel::DiffDetailPanel {
+                            app.toggle_panel();
+                        }
+                    }
+                    KeyCode::Right => {
+                        if is_ctrl && app.active_panel == ActivePanel::DiffDetailPanel {
+                            if app.diff_horizontal_scroll < app.diff_max_width {
+                                app.diff_horizontal_scroll =
+                                    app.diff_horizontal_scroll.saturating_add(4);
+                            }
+                        } else if !is_ctrl && app.active_panel == ActivePanel::CommitListPanel {
+                            app.toggle_panel();
+                        }
+                    }
+                    KeyCode::Up => match app.active_panel {
+                        ActivePanel::CommitListPanel => app.previous_commit(&git_manager),
+                        ActivePanel::DiffDetailPanel => {
+                            if app.diff_scroll > 0 {
+                                app.diff_scroll -= 1;
+                            }
+                        }
+                    },
+                    KeyCode::Down => match app.active_panel {
+                        ActivePanel::CommitListPanel => app.next_commit(&git_manager),
+                        ActivePanel::DiffDetailPanel => {
+                            if (app.diff_scroll as usize) < app.current_diff.len() {
+                                app.diff_scroll += 1;
+                            }
+                        }
+                    },
                     _ => {}
                 }
             }
         }
     }
 
-    crossterm::terminal::disable_raw_mode()?;
     crossterm::execute!(
         terminal.backend_mut(),
         crossterm::terminal::LeaveAlternateScreen
     )?;
+    crossterm::terminal::disable_raw_mode()?;
 
     Ok(())
 }

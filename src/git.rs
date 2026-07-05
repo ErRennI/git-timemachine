@@ -5,6 +5,7 @@ use git2::{Oid, Repository, Sort};
 pub struct DiffLine {
     pub content: String,
     pub line_type: char,
+    pub file_name: String,
 }
 pub struct CommitInfo {
     pub id: Oid,
@@ -62,14 +63,21 @@ impl GitManager {
 
         let mut diff_lines: Vec<DiffLine> = Vec::new();
 
-        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
             let origin = line.origin();
-
             let content = String::from_utf8_lossy(line.content()).into_owned();
+
+            let file_name = delta
+                .new_file()
+                .path()
+                .and_then(|p| p.to_str())
+                .unwrap_or("Unknown file")
+                .to_string();
 
             diff_lines.push(DiffLine {
                 content,
                 line_type: origin,
+                file_name,
             });
 
             true

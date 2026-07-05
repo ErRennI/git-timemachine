@@ -1,7 +1,11 @@
 [package]
-name = "git-timemachine"
+name = "gtm"
 version = "0.1.0"
 edition = "2024"
+authors = ["Eren Ada Doğan"]
+description = "A fast and interactive terminal user interface (TUI) for exploring Git commit history."
+repository = "https://github.com/ErRennI/git-timemachine"
+license = "MIT"
 
 [dependencies]
 git2 = "0.19"
